@@ -1,0 +1,89 @@
+name: 📦 Create Plugin Releases
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Setup PowerShell
+      shell: pwsh
+      run: |
+        # התקן את PowerShell modules אם צריך
+        Install-Module -Name PowerShellGet -Force -SkipPublisherCheck
+
+    - name: 📦 Build and Package Plugins
+      shell: pwsh
+      run: |
+        # קבל את כל תיקיות התוספים
+        $plugins = Get-ChildItem -Directory | Where-Object { $_.Name -notmatch '^\.' }
+
+        foreach ($plugin in $plugins) {
+            Write-Host "🔄 עיבוד תוסף: $($plugin.Name)"
+
+            # קרא את manifest.json
+            $manifestPath = Join-Path $plugin.FullName "manifest.json"
+            if (Test-Path $manifestPath) {
+                $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+                $version = $manifest.version
+                $pluginName = $plugin.Name
+
+                Write-Host "📋 שם: $pluginName, גרסה: $version"
+
+                # צור שם קובץ עם גרסה
+                $zipName = "$pluginName-$version.zip"
+                $otzName = "$pluginName-$version.otzplugin"
+
+                # עבור לתיקיית התוסף
+                Push-Location $plugin.FullName
+
+                try {
+                    # ארז את כל הקבצים
+                    Compress-Archive -Path "*" -DestinationPath "../$zipName" -Force
+
+                    # שנה שם ל-.otzplugin
+                    Rename-Item "../$zipName" "../$otzName"
+
+                    Write-Host "✅ נוצר: $otzName"
+                }
+                catch {
+                    Write-Host "❌ שגיאה ביצירת $otzName : $_"
+                }
+                finally {
+                    Pop-Location
+                }
+            }
+            else {
+                Write-Host "⚠️  לא נמצא manifest.json עבור $($plugin.Name)"
+            }
+        }
+
+        # הצג את הקבצים שנוצרו
+        Write-Host "📁 קבצים שנוצרו:"
+        Get-ChildItem "*.otzplugin" | ForEach-Object {
+            Write-Host "  - $($_.Name) ($($_.Length) bytes)"
+        }
+
+    - name: 🚀 Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: "*.otzplugin"
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🧹 Cleanup
+      shell: pwsh
+      run: |
+        # נקה קבצי .otzplugin אחרי ה-release
+        Get-ChildItem "*.otzplugin" | Remove-Item -Force
+        Write-Host "🧹 ניקוי הושלם"
