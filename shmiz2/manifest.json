@@ -1,0 +1,15 @@
+{
+  "id": "il.otzaria.attendance-clock",
+  "name": "שעון נוכחות",
+  "version": "1.0.1",
+  "description": "מערכת רישום נוכחות עבור מסגרות לימוד — כניסה/יציאה, היסטוריה, ייצוא ועוד",
+  "author": "lodbig",
+  "entrypoint": "index.html",
+  "permissions": [
+    "plugin.storage.read",
+    "plugin.storage.write",
+    "calendar.read",
+    "ui.feedback",
+    "events.subscribe:theme.changed"
+  ]
+}

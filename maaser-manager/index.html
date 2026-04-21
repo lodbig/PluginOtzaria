@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>מעשר כספים</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --c-pri:#6750A4;--c-on-pri:#FFF;--c-sec:#625B71;--c-on-sec:#FFF;
+  --c-surf:#FFFBFE;--c-on-surf:#1C1B1F;--c-surf-hi:#E6E0E9;
+  --c-err:#B3261E;--c-on-err:#FFF;--c-out:#79747E;
+  --c-pri-s:rgba(103,80,164,.12);--c-sec-s:rgba(98,91,113,.12);
+  --font:'Frank Ruhl Libre','David',serif;--fs:18px;--lh:1.5;
+  --r-sm:8px;--r-md:12px;--r-lg:16px;--r-pill:999px;
+}
+body{font-family:var(--font);font-size:var(--fs);line-height:var(--lh);
+  background:var(--c-surf);color:var(--c-on-surf);direction:rtl;
+  min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ══ LOCK SCREEN ══ */
+#lock-screen{position:fixed;inset:0;z-index:9999;background:var(--c-surf);
+  display:none;align-items:center;justify-content:center;transition:opacity .25s}
+#lock-screen.open{display:flex}
+#lock-screen.hiding{opacity:0;pointer-events:none}
+.lock-card{background:var(--c-surf-hi);border-radius:24px;
+  padding:28px 24px 20px;text-align:center;width:min(300px,88vw)}
+.lock-icon{font-size:2.2em;margin-bottom:8px}
+.lock-title{font-size:1em;font-weight:700;color:var(--c-pri);margin-bottom:2px}
+.lock-sub{font-size:.72em;opacity:.6;margin-bottom:14px}
+.pin-dots{display:flex;justify-content:center;gap:10px;margin-bottom:14px}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--c-out);
+  background:transparent;transition:background .15s,border-color .15s}
+.pin-dot.filled{background:var(--c-pri);border-color:var(--c-pri)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.pin-key{padding:11px 6px;border:none;border-radius:var(--r-md);
+  background:var(--c-surf);color:var(--c-on-surf);font-family:var(--font);
+  font-size:1em;font-weight:700;cursor:pointer;transition:background .12s}
+.pin-key:hover{background:var(--c-pri-s)}
+.pin-key:active{transform:scale(.93)}
+.pin-key.del{font-size:.82em;color:var(--c-err)}
+.pin-key.empty{background:transparent;pointer-events:none}
+.lock-err{font-size:.7em;color:var(--c-err);margin-top:5px;min-height:1.1em;opacity:0;transition:opacity .2s}
+.lock-err.show{opacity:1}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+.shake{animation:shake .3s ease}
+
+/* ══ APP HEADER ══ */
+.app-header{padding:11px 14px 0;background:var(--c-surf);
+  border-bottom:1px solid var(--c-out);flex-shrink:0}
+.header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.app-title{font-size:.98em;font-weight:700;color:var(--c-pri);display:flex;align-items:center;gap:6px}
+.header-actions{display:flex;align-items:center;gap:5px}
+.btn-icon{width:34px;height:34px;border:none;border-radius:var(--r-pill);
+  background:var(--c-pri-s);color:var(--c-pri);cursor:pointer;
+  font-size:.9em;transition:background .12s,transform .1s;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.btn-icon:active{transform:scale(.9)}
+.btn-icon.danger{background:rgba(179,38,30,.12);color:var(--c-err)}
+.rate-badge-mini{font-size:.66em;font-weight:700;padding:3px 8px;
+  border-radius:var(--r-pill);background:var(--c-pri-s);color:var(--c-pri);
+  cursor:pointer;border:1px solid var(--c-pri);white-space:nowrap}
+.rate-badge-mini:hover{background:var(--c-pri);color:var(--c-on-pri)}
+
+/* ══ TABS ══ */
+.tabs{display:grid;grid-template-columns:repeat(5,1fr)}
+.tab-btn{padding:8px 2px;border:none;background:transparent;
+  font-family:var(--font);font-size:.67em;font-weight:600;
+  color:var(--c-on-surf);cursor:pointer;
+  border-bottom:3px solid transparent;
+  transition:color .15s,border-color .15s;opacity:.55;
+  border-radius:var(--r-sm) var(--r-sm) 0 0}
+.tab-btn:hover{background:var(--c-sec-s);opacity:.82}
+.tab-btn.active{color:var(--c-pri);border-bottom-color:var(--c-pri);opacity:1}
+
+/* ══ PANELS ══ */
+.tab-panel{display:none;flex:1;padding:14px;overflow-y:auto;
+  animation:fadeIn .18s ease-out;max-height:calc(100vh - 88px)}
+.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══ CARDS ══ */
+.card{background:var(--c-surf);border:1px solid var(--c-out);
+  border-radius:var(--r-md);padding:12px 14px;margin-bottom:12px}
+.card-title{font-size:.8em;font-weight:700;color:var(--c-pri);
+  margin-bottom:10px;display:flex;align-items:center;gap:5px}
+
+/* ══ SUMMARY ══ */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.sc{background:var(--c-surf);border:1px solid var(--c-out);border-radius:var(--r-md);padding:10px 12px}
+.sc.hi{background:var(--c-pri-s);border-color:var(--c-pri)}
+.sc.ok{background:rgba(34,139,34,.08);border-color:#4CAF50}
+.sc.err{background:rgba(179,38,30,.08);border-color:var(--c-err)}
+.sc-label{font-size:.64em;opacity:.7;font-weight:600;margin-bottom:1px}
+.sc-value{font-size:1.1em;font-weight:700}
+.sc.hi .sc-value{color:var(--c-pri)}.sc.ok .sc-value{color:#228B22}.sc.err .sc-value{color:var(--c-err)}
+
+/* ══ PROGRESS ══ */
+.prog-wrap{background:var(--c-sec-s);border-radius:var(--r-pill);height:6px;overflow:hidden;margin-top:4px}
+.prog-bar{height:100%;border-radius:var(--r-pill);background:var(--c-pri);transition:width .4s cubic-bezier(.4,0,.2,1)}
+
+/* ══ QUICK PAY POPOVER (anchored to button) ══ */
+.qp-anchor{position:relative;display:block}
+.qp-popover{
+  position:fixed;
+  bottom:0;right:0;left:0;
+  background:var(--c-surf-hi);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  box-shadow:0 -4px 24px rgba(0,0,0,.18);
+  border-top:1px solid var(--c-out);
+  padding:18px 18px 28px;
+  z-index:300;
+  opacity:0;transform:translateY(100%);pointer-events:none;
+  transform-origin:bottom center;
+  transition:opacity .2s,transform .25s cubic-bezier(.4,0,.2,1);
+  max-height:70vh;overflow-y:auto;
+}
+.qp-popover.open{opacity:1;transform:translateY(0);pointer-events:auto}
+.qp-scrim{position:fixed;inset:0;background:rgba(0,0,0,.25);
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:299}
+.qp-scrim.open{opacity:1;pointer-events:auto}
+.qp-handle{width:36px;height:4px;background:var(--c-out);border-radius:var(--r-pill);
+  margin:0 auto 14px;opacity:.45}
+.qp-title{font-size:.88em;font-weight:700;color:var(--c-pri);margin-bottom:12px}
+
+/* ══ DASH QUICK-PAY TRIGGER BUTTON ══ */
+.qp-trigger-card{
+  background:var(--c-pri);border-radius:var(--r-md);
+  padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;border:none;font-family:var(--font);width:100%;
+  color:var(--c-on-pri);transition:opacity .15s;margin-bottom:0;
+}
+.qp-trigger-card:hover{opacity:.9}
+.qp-trigger-card:active{opacity:.8;transform:scale(.99)}
+.qp-trigger-label{font-size:1.4em;font-weight:700}
+.qp-trigger-sub{font-size:1.2em;opacity:.75;margin-top:2px;margin-right: 30px;}
+.qp-trigger-icon{font-size:1.4em;opacity:.85}
+
+/* ══ FORMS ══ */
+.form-group{margin-bottom:10px}
+.form-label{display:block;font-size:.73em;font-weight:600;margin-bottom:3px;opacity:.8}
+.form-input,.form-select,.form-textarea{
+  width:100%;padding:7px 10px;border:1.5px solid var(--c-out);
+  border-radius:var(--r-sm);background:var(--c-surf);color:var(--c-on-surf);
+  font-family:var(--font);font-size:.86em;outline:none;transition:border-color .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{
+  border-color:var(--c-pri);box-shadow:0 0 0 2px var(--c-pri-s)}
+.form-textarea{resize:vertical;min-height:52px}
+.preview-box{background:var(--c-pri-s);border-radius:var(--r-sm);padding:7px 10px;
+  margin-top:4px;font-size:.78em;color:var(--c-pri);font-weight:600;display:none}
+.preview-box.vis{display:block}
+
+/* Search bar */
+.search-wrap{position:relative;margin-bottom:8px}
+.search-input{padding-right:32px!important}
+.search-icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  font-size:.82em;opacity:.45;pointer-events:none}
+.search-clear{position:absolute;left:8px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;font-size:.8em;opacity:.5;
+  padding:2px 4px;border-radius:var(--r-pill)}
+.search-clear:hover{opacity:1;background:var(--c-sec-s)}
+
+/* ══ BUTTONS ══ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;
+  padding:8px 16px;border:none;border-radius:var(--r-pill);
+  font-family:var(--font);font-size:.8em;font-weight:700;
+  cursor:pointer;transition:opacity .15s,transform .1s}
+.btn:active{transform:scale(.96)}
+.btn-pri{background:var(--c-pri);color:var(--c-on-pri)}.btn-pri:hover{opacity:.88}
+.btn-sec{background:var(--c-sec-s);color:var(--c-sec);border:1px solid var(--c-out)}.btn-sec:hover{opacity:.8}
+.btn-err{background:rgba(179,38,30,.1);color:var(--c-err)}.btn-err:hover{opacity:.8}
+.btn-full{width:100%}
+.btn-sm{padding:5px 10px;font-size:.72em}
+
+/* ══ TYPE TOGGLE ══ */
+.type-toggle{display:flex;background:var(--c-sec-s);border-radius:var(--r-sm);padding:3px;gap:2px;margin-bottom:10px}
+.type-btn{flex:1;padding:6px 3px;border:none;border-radius:6px;background:transparent;
+  font-family:var(--font);font-size:.73em;font-weight:600;cursor:pointer;
+  color:var(--c-on-surf);transition:all .15s;opacity:.58}
+.type-btn.active{background:var(--c-surf);opacity:1;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.type-btn.active.t-inc{color:#228B22}.type-btn.active.t-pay{color:var(--c-pri)}.type-btn.active.t-rec{color:#E65100}
+
+/* ══ CHIPS ══ */
+.chip-row{display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:1px solid var(--c-out);border-radius:var(--r-pill);padding:4px 10px;
+  font-size:.7em;font-weight:600;background:transparent;color:var(--c-on-surf);
+  cursor:pointer;font-family:var(--font);transition:all .14s;opacity:.65;white-space:nowrap}
+.chip.active{background:var(--c-pri-s);border-color:var(--c-pri);color:var(--c-pri);opacity:1}
+.chip:hover:not(.active){background:var(--c-sec-s);opacity:.85}
+.chip.org.active{background:rgba(230,81,0,.1);border-color:#E65100;color:#E65100}
+
+/* ══ HISTORY TOOLBAR (type chips + IO buttons in one row) ══ */
+.hist-toolbar{display:flex;align-items:center;gap:5px;margin-bottom:8px;flex-wrap:wrap}
+.hist-toolbar .chip-row{flex:1;min-width:0}
+.io-btns{display:flex;gap:5px;flex-shrink:0;margin-right:auto}  /* margin-right:auto pushes to the left in RTL */
+
+/* ══ HISTORY ITEMS ══ */
+.hist-list{display:flex;flex-direction:column;gap:7px}
+.hist-item{background:var(--c-surf);border:1px solid var(--c-out);border-radius:var(--r-md);
+  padding:9px 11px;display:flex;align-items:flex-start;gap:8px;
+  animation:fadeIn .18s ease-out;transition:background .12s}
+.hist-item:hover{background:var(--c-sec-s)}
+.hist-item.rec-item{border-right:3px solid #E65100}
+.h-icon{width:30px;height:30px;border-radius:var(--r-pill);display:flex;
+  align-items:center;justify-content:center;font-size:.85em;flex-shrink:0}
+.h-icon.inc{background:rgba(34,139,34,.12)}.h-icon.pay{background:var(--c-pri-s)}.h-icon.rec{background:rgba(230,81,0,.1)}
+.h-body{flex:1;min-width:0}
+.h-desc{font-weight:600;font-size:.83em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-meta{font-size:.65em;opacity:.56;margin-top:1px}
+.h-right{text-align:left;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.h-amt{font-weight:700;font-size:.84em}
+.h-amt.inc{color:#228B22}.h-amt.pay{color:var(--c-pri)}.h-amt.rec{color:#E65100}
+.h-maaser{font-size:.63em;background:var(--c-pri-s);color:var(--c-pri);border-radius:var(--r-pill);padding:1px 5px}
+.h-del{background:none;border:none;cursor:pointer;color:var(--c-out);font-size:.8em;
+  padding:2px 3px;border-radius:var(--r-sm);transition:all .12s;flex-shrink:0;opacity:.38}
+.h-del:hover{color:var(--c-err);background:rgba(179,38,30,.1);opacity:1}
+
+/* ══ FILTER BLOCK ══ */
+.filter-block{background:var(--c-surf-hi);border-radius:var(--r-md);
+  padding:9px 12px;margin-bottom:9px}
+.filter-label{font-size:.67em;font-weight:700;opacity:.58;margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:.03em}
+
+/* ══ EMPTY / COUNT ══ */
+.empty{text-align:center;padding:26px 14px;opacity:.42}
+.empty-icon{font-size:2em;margin-bottom:6px}
+.empty-txt{font-size:.77em}
+.result-count{font-size:.67em;opacity:.5;margin-bottom:6px;font-weight:600}
+
+/* ══ TOGGLE SWITCH ══ */
+.tog-wrap{position:relative;width:42px;height:22px;flex-shrink:0}
+.tog-wrap input{opacity:0;width:0;height:0;position:absolute}
+.tog-slider{position:absolute;inset:0;background:var(--c-out);border-radius:var(--r-pill);
+  cursor:pointer;transition:background .2s}
+.tog-slider::before{content:'';position:absolute;width:16px;height:16px;top:3px;right:3px;
+  background:#fff;border-radius:50%;transition:transform .2s}
+.tog-wrap input:checked+.tog-slider{background:var(--c-pri)}
+.tog-wrap input:checked+.tog-slider::before{transform:translateX(-20px)}
+
+/* ══ NOTIFICATIONS ══ */
+.notif-master{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
+  background:var(--c-surf-hi);border-radius:var(--r-md);margin-bottom:12px}
+.notif-sec{opacity:.3;pointer-events:none;transition:opacity .2s}
+.notif-sec.on{opacity:1;pointer-events:auto}
+.hol-card{background:var(--c-surf);border:1px solid var(--c-out);border-radius:var(--r-md);
+  padding:9px 12px;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.hol-name{flex:1;font-size:.82em;font-weight:600}
+
+/* ══ SETTINGS ══ */
+.settings-section{margin-bottom:16px}
+.settings-sec-title{font-size:.73em;font-weight:700;opacity:.52;
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.rate-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rate-btn{padding:9px 8px;border:2px solid var(--c-out);border-radius:var(--r-sm);
+  background:var(--c-surf);font-family:var(--font);font-size:.82em;font-weight:700;
+  color:var(--c-on-surf);cursor:pointer;transition:all .15s;text-align:center}
+.rate-btn:hover{background:var(--c-sec-s)}
+.rate-btn.sel{border-color:var(--c-pri);background:var(--c-pri-s);color:var(--c-pri)}
+.rate-btn small{display:block;font-size:.68em;opacity:.68;margin-top:1px}
+.privacy-row{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:var(--c-surf-hi);border-radius:var(--r-md);margin-bottom:8px}
+.privacy-row-label{font-size:.82em;font-weight:600}
+.privacy-row-sub{font-size:.67em;opacity:.6;margin-top:1px}
+.pin-row{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:var(--c-surf-hi);border-radius:var(--r-md)}
+
+/* ══ RECURRING ══ */
+.rec-card{background:var(--c-surf);border:1px solid var(--c-out);border-radius:var(--r-md);
+  padding:9px 12px;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.rec-card.ended{opacity:.5}
+.rec-body{flex:1;min-width:0}
+.rec-name{font-weight:600;font-size:.82em}
+.rec-meta{font-size:.66em;opacity:.58;margin-top:1px}
+.rec-status{font-size:.63em;font-weight:700;border-radius:var(--r-pill);padding:2px 7px;flex-shrink:0}
+.rec-status.active{background:rgba(34,139,34,.12);color:#228B22}
+.rec-status.ended{background:rgba(179,38,30,.1);color:var(--c-err)}
+
+/* ══ DANGER ZONE in settings ══ */
+.danger-zone{background:rgba(179,38,30,.06);border:1px solid rgba(179,38,30,.25);
+  border-radius:var(--r-md);padding:14px;margin-bottom:12px}
+.danger-zone-title{font-size:.78em;font-weight:700;color:var(--c-err);margin-bottom:8px;
+  display:flex;align-items:center;gap:5px}
+.danger-zone-sub{font-size:.68em;opacity:.65;margin-bottom:10px;line-height:1.4}
+
+/* ══ EXPORT MODAL (overlay — fallback) ══ */
+.ov-scrim{position:fixed;inset:0;background:rgba(0,0,0,.3);opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:400}
+.ov-scrim.open{opacity:1;pointer-events:auto}
+.ov-panel{position:fixed;top:10px;bottom:12px;right:10px;width:min(340px,calc(100vw - 20px));
+  background:color-mix(in srgb,var(--c-sec) 12%,var(--c-surf));
+  border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:16px;overflow-y:auto;
+  z-index:401;opacity:0;transform:translateX(30px);pointer-events:none;
+  transition:opacity .2s,transform .25s cubic-bezier(.4,0,.2,1)}
+.ov-panel.open{opacity:1;transform:translateX(0);pointer-events:auto}
+.ov-title{font-size:.9em;font-weight:700;margin-bottom:10px;color:var(--c-pri)}
+.ov-close{position:absolute;top:12px;left:12px;background:none;border:none;
+  cursor:pointer;font-size:1em;opacity:.55}
+.ov-close:hover{opacity:1}
+.export-ta{width:100%;height:190px;border:1px solid var(--c-out);border-radius:var(--r-sm);
+  background:var(--c-surf);color:var(--c-on-surf);font-family:monospace;font-size:.6em;
+  padding:7px;resize:none}
+
+/* ══ PIN SETUP ══ */
+.pin-setup-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:500}
+.pin-setup-scrim.open{opacity:1;pointer-events:auto}
+.pin-setup-panel{position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%) scale(.95);width:min(290px,84vw);
+  background:var(--c-surf-hi);border-radius:20px;padding:18px;
+  z-index:501;opacity:0;pointer-events:none;transition:all .2s}
+.pin-setup-panel.open{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+.setup-title{font-size:.88em;font-weight:700;color:var(--c-pri);margin-bottom:10px;text-align:center}
+
+hr.div{border:none;border-top:1px solid var(--c-out);margin:10px 0;opacity:.35}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--c-out);border-radius:10px}
+</style>
+</head>
+<body>
+
+<!-- ══ LOCK ══ -->
+<div id="lock-screen">
+  <div class="lock-card">
+    <div class="lock-icon">🔐</div>
+    <div class="lock-title">ניהול מעשרות</div>
+    <div class="lock-sub" id="lock-sub">הזן קוד גישה</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="pkPress(1)">1</button>
+      <button class="pin-key" onclick="pkPress(2)">2</button>
+      <button class="pin-key" onclick="pkPress(3)">3</button>
+      <button class="pin-key" onclick="pkPress(4)">4</button>
+      <button class="pin-key" onclick="pkPress(5)">5</button>
+      <button class="pin-key" onclick="pkPress(6)">6</button>
+      <button class="pin-key" onclick="pkPress(7)">7</button>
+      <button class="pin-key" onclick="pkPress(8)">8</button>
+      <button class="pin-key" onclick="pkPress(9)">9</button>
+      <button class="pin-key empty"></button>
+      <button class="pin-key" onclick="pkPress(0)">0</button>
+      <button class="pin-key del" onclick="pkDel()">⌫</button>
+    </div>
+    <div class="lock-err" id="lock-err">קוד שגוי</div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<header class="app-header">
+  <div class="header-row">
+    <div class="app-title">🌾 ניהול מעשר כספים</div>
+    <div class="header-actions">
+      <span class="rate-badge-mini" id="rate-mini" onclick="switchTab('settings')" title="לחץ לשינוי שיעור">10%</span>
+      <button class="btn-icon" id="quick-hide-btn" onclick="toggleQuickHide()" title="הסתר/הצג סכומים">👁️</button>
+      <button class="btn-icon" id="lock-btn" onclick="lockApp()" title="נעל" style="display:none">🔒</button>
+    </div>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" onclick="switchTab('dash')"     id="tab-dash">📊 סיכום</button>
+    <button class="tab-btn"        onclick="switchTab('add')"      id="tab-add">➕ הוספה</button>
+    <button class="tab-btn"        onclick="switchTab('hist')"     id="tab-hist">📋 היסטוריה</button>
+    <button class="tab-btn"        onclick="switchTab('notif')"    id="tab-notif">🔔 התראות</button>
+    <button class="tab-btn"        onclick="switchTab('settings')" id="tab-settings">⚙️ הגדרות</button>
+  </div>
+</header>
+
+<!-- ══ DASHBOARD ══ -->
+<div class="tab-panel active" id="panel-dash">
+  <div class="summary-grid">
+    <div class="sc"><div class="sc-label">סה״כ הכנסות</div><div class="sc-value" id="s-inc">₪0</div></div>
+    <div class="sc hi"><div class="sc-label">חובת מעשר</div><div class="sc-value" id="s-oblig">₪0</div></div>
+    <div class="sc ok"><div class="sc-label">שולם עד כה</div><div class="sc-value" id="s-paid">₪0</div></div>
+    <div class="sc" id="s-bal-card"><div class="sc-label">יתרה לתשלום</div><div class="sc-value" id="s-bal">₪0</div></div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <span style="font-size:.76em;font-weight:700;opacity:.72">התקדמות תשלום המעשר</span>
+      <span id="s-pct" style="font-size:.7em;font-weight:700;color:var(--c-pri)">0%</span>
+    </div>
+    <div class="prog-wrap"><div class="prog-bar" id="s-prog" style="width:0%"></div></div>
+  </div>
+
+  <!-- Quick Pay trigger — opens bottom sheet popover -->
+  <button class="qp-trigger-card" onclick="openQP()" id="qp-trigger">
+    <div style="text-align:right">
+      <div class="qp-trigger-label">⚡ תרומה מהירה</div>
+      <div class="qp-trigger-sub">לחץ לתשלום מעשר</div>
+    </div>
+    <div class="qp-trigger-icon">←</div>
+  </button>
+</div>
+
+<!-- ══ QUICK PAY BOTTOM SHEET ══ -->
+<div class="qp-scrim" id="qp-scrim" onclick="closeQP()"></div>
+<div class="qp-popover" id="qp-popover">
+  <div class="qp-handle"></div>
+  <div class="qp-title">⚡תרומה מהירה</div>
+  <div class="form-group">
+    <label class="form-label">סכום (₪)</label>
+    <input type="number" class="form-input" id="qp-amt" placeholder="0.00" min="0" step="0.01" />
+  </div>
+  <div class="form-group">
+    <label class="form-label">תיאור (אופציונלי)</label>
+    <input type="text" class="form-input" id="qp-desc" placeholder="צדקה, ישיבה, עניים..." />
+  </div>
+  <button class="btn btn-pri btn-full" onclick="addQuickPay()" style="margin-bottom:8px">✓ שלם / תרום</button>
+  <button class="btn btn-sec btn-full" onclick="closeQP()">ביטול</button>
+</div>
+
+<!-- ══ ADD ══ -->
+<div class="tab-panel" id="panel-add">
+  <div class="card">
+    <div class="type-toggle">
+      <button class="type-btn t-inc active" id="t-inc" onclick="setType('income')">💰 הכנסה</button>
+      <button class="type-btn t-pay"        id="t-pay" onclick="setType('payment')">🕊️ תרומות</button>
+      <button class="type-btn t-rec"        id="t-rec" onclick="setType('recurring')">🔁 תרומה קבועה</button>
+    </div>
+    <div id="onetime-fields">
+      <div class="form-group">
+        <label class="form-label">סכום (₪) *</label>
+        <input type="number" class="form-input" id="e-amt" placeholder="0.00" min="0" step="0.01" oninput="updatePreview()"/>
+        <div class="preview-box" id="e-preview"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תיאור *</label>
+        <input type="text" class="form-input" id="e-desc" placeholder='משכורת או תרומה...'/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תאריך</label>
+        <input type="date" class="form-input" id="e-date"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">הערה</label>
+        <textarea class="form-textarea" id="e-note" placeholder="פרטים נוספים..."></textarea>
+      </div>
+      <button class="btn btn-pri btn-full" onclick="addEntry()">💾 שמור</button>
+    </div>
+    <div id="recurring-fields" style="display:none">
+      <div class="form-group">
+        <label class="form-label">סכום (₪) *</label>
+        <input type="number" class="form-input" id="r-amt" placeholder="0.00" min="0" step="0.01"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תיאור *</label>
+        <input type="text" class="form-input" id="r-desc" placeholder="תרומה חודשית לישיבה..."/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תדירות</label>
+        <select class="form-select" id="r-freq">
+          <option value="monthly">חודשי</option>
+          <option value="weekly">שבועי</option>
+          <option value="yearly">שנתי</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תאריך התחלה</label>
+        <input type="date" class="form-input" id="r-start"/>
+      </div>
+      <div class="form-group">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <label class="form-label" style="margin:0">תאריך סיום</label>
+          <label class="tog-wrap" style="width:36px;height:20px">
+            <input type="checkbox" id="r-has-end" onchange="toggleEndDate()"/>
+            <span class="tog-slider"></span></label>
+        </div>
+        <input type="date" class="form-input" id="r-end" disabled style="opacity:.42"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">הערה</label>
+        <input type="text" class="form-input" id="r-note" placeholder="פרטים..."/>
+      </div>
+      <button class="btn btn-full" onclick="addRecurring()" style="background:#E65100;color:#fff;border-radius:var(--r-pill);padding:8px 16px;font-size:.8em;font-weight:700;border:none;cursor:pointer;width:100%">🔁 הוסף תרומה קבועה</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HISTORY ══ -->
+<div class="tab-panel" id="panel-hist">
+
+  <!-- TOOLBAR: type chips (right/flex) + IO buttons (left) -->
+  <div class="hist-toolbar" style="margin-bottom:8px">
+    <div class="chip-row" id="type-chips" style="flex:1">
+      <button class="chip active" data-tf="all">הכל</button>
+      <button class="chip" data-tf="income">💰 הכנסות</button>
+      <button class="chip" data-tf="payment">🕊️ תרומות</button>
+      <button class="chip org" data-tf="recurring">🔁 תרומות קבועות</button>
+    </div>
+    <div class="io-btns">
+      <button class="btn btn-sec btn-sm" onclick="exportJSON()" title="יצוא JSON">📄</button>
+      <!-- <button class="btn btn-sec btn-sm" onclick="exportExcel()" title="יצוא Excel">📊</button> -->
+      <button class="btn btn-sec btn-sm" onclick="document.getElementById('import-file').click()" title="ייבוא">📥</button>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="form-input search-input" id="hist-search"
+      placeholder="חיפוש לפי תיאור, הערה, תאריך..."
+      oninput="renderHist()"/>
+    <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" style="display:none">✕</button>
+  </div>
+
+  <!-- Period filter -->
+  <div class="filter-block">
+    <div class="filter-label">סינון לפי תקופה</div>
+    <div class="chip-row" style="margin-bottom:6px">
+      <button class="chip active" id="pft-none"   onclick="setPFT('none')">ללא סינון</button>
+      <button class="chip"        id="pft-hebrew"  onclick="setPFT('hebrew')">עברי</button>
+      <button class="chip"        id="pft-greg"    onclick="setPFT('greg')">לועזי</button>
+    </div>
+    <div id="period-selectors" style="display:none">
+      <div class="filter-label">שנה</div>
+      <div class="chip-row" id="year-chips" style="margin-bottom:6px"></div>
+      <div class="filter-label" id="month-label" style="display:none">חודש</div>
+      <div class="chip-row" id="month-chips"></div>
+    </div>
+  </div>
+
+  <div class="result-count" id="result-count"></div>
+  <div class="hist-list" id="hist-list"></div>
+</div>
+
+<!-- ══ NOTIFICATIONS ══ -->
+<div class="tab-panel" id="panel-notif">
+  <div class="notif-master">
+    <div>
+      <div style="font-size:.88em;font-weight:700">🔔 התראות מערכת</div>
+      <div style="font-size:.68em;opacity:.6;margin-top:2px">שלח התראה כאשר יתרת המעשר גבוהה</div>
+    </div>
+    <label class="tog-wrap"><input type="checkbox" id="n-enabled" onchange="toggleNotifSec()"/><span class="tog-slider"></span></label>
+  </div>
+  <div class="notif-sec" id="notif-sec">
+    <div class="card">
+      <div class="card-title">⚙️ סף וזמן</div>
+      <div class="form-group">
+        <label class="form-label">שלח כאשר יתרה גבוהה מ- (₪)</label>
+        <input type="number" class="form-input" id="n-thresh" value="100" min="0" step="10"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">שעת שליחה</label>
+        <input type="time" class="form-input" id="n-time" value="09:00"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ביום ה- ___ לחודש</label>
+        <select class="form-select" id="n-dom">
+          <option value="1">1</option><option value="5">5</option>
+          <option value="10">10</option><option value="15">15</option>
+          <option value="20">20</option><option value="25">25</option>
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 חודשים עבריים</div>
+      <div class="chip-row" id="heb-m-chips"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 חודשים לועזיים</div>
+      <div class="chip-row" id="greg-m-chips"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">✡️ חגים ומועדים</div>
+      <div style="font-size:.68em;opacity:.6;margin-bottom:8px">תזכורת לפני (או ביום) חג:</div>
+      <div id="hol-cards"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-pri" style="flex:1" onclick="saveNotif()">💾 שמור ותזמן</button>
+      <button class="btn btn-sec" onclick="checkTodayNotif()">🔍 בדוק היום</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="tab-panel" id="panel-settings">
+
+  <div class="settings-section">
+    <div class="settings-sec-title">שיעור המעשר</div>
+    <div class="rate-grid">
+      <button class="rate-btn sel" id="rb-10" onclick="setRate(.1)">מעשר<small>10% מהכנסות</small></button>
+      <button class="rate-btn"    id="rb-20" onclick="setRate(.2)">חומש<small>20% מהכנסות</small></button>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <div class="settings-section">
+    <div class="settings-sec-title">פרטיות</div>
+    <div class="privacy-row">
+      <div>
+        <div class="privacy-row-label">הסתרת סכומים קבועה</div>
+        <div class="privacy-row-sub">סכומים יוצגו כ ••••</div>
+      </div>
+      <label class="tog-wrap"><input type="checkbox" id="priv-toggle" onchange="togglePrivacyPerm()"/><span class="tog-slider"></span></label>
+    </div>
+    <div style="font-size:.68em;opacity:.55;margin-top:5px;line-height:1.4">
+      לחץ 👁️ בכותרת להסתרה מיידית · ההגדרה הקבועה נשמרת בין פתיחות
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <div class="settings-section">
+    <div class="settings-sec-title">קוד גישה</div>
+    <div class="pin-row">
+      <div>
+        <div style="font-size:.82em;font-weight:600">🔐 קוד PIN</div>
+        <div style="font-size:.68em;opacity:.6;margin-top:1px" id="pin-status">לא מוגדר</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sec btn-sm" id="pin-set-btn" onclick="openPinSetup('set')">הגדר</button>
+        <button class="btn btn-err btn-sm" id="pin-del-btn" onclick="openPinSetup('del')" style="display:none">הסר</button>
+      </div>
+    </div>
+    <div style="font-size:.68em;opacity:.55;margin-top:5px;line-height:1.4">
+     הנתונים אינם מוצפנים. קוד הPIN מקשה על גישה לא מורשית, אך אינו מונע אותה באופן מוחלט.
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <div class="settings-section">
+    <div class="settings-sec-title">תרומות קבועות</div>
+    <div id="rec-list-settings"></div>
+    <div style="font-size:.68em;opacity:.5;margin-top:4px">להוספה: "הוספה" ← 🔁 קבוע</div>
+  </div>
+
+  <hr class="div">
+
+  <!-- Danger zone -->
+  <div class="settings-section">
+    <div class="settings-sec-title">אזור מסוכן</div>
+    <div class="danger-zone">
+      <div class="danger-zone-title">⚠️ איפוס נתונים</div>
+      <div class="danger-zone-sub">מחיקת כל הרשומות, ההכנסות, התרומות והתרומות הקבועות. פעולה זו בלתי הפיכה.</div>
+      <button class="btn btn-err btn-full" onclick="clearAll()">🗑️ מחק את כל הנתונים</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ EXPORT FALLBACK OVERLAY ══ -->
+<div class="ov-scrim" id="ov-scrim" onclick="closeOv()"></div>
+<div class="ov-panel" id="ov-panel">
+  <button class="ov-close" onclick="closeOv()">✕</button>
+  <div class="ov-title">📄 יצוא נתונים</div>
+  <div style="font-size:.7em;opacity:.6;margin-bottom:7px">ההורדה לא הצליחה — העתק ידנית:</div>
+  <textarea class="export-ta" id="ov-ta" readonly onclick="this.select()"></textarea>
+  <button class="btn btn-sec btn-full" style="margin-top:8px" onclick="copyExportFallback()">📋 העתק</button>
+</div>
+
+<!-- ══ PIN SETUP ══ -->
+<div class="pin-setup-scrim" id="pss"></div>
+<div class="pin-setup-panel" id="psp">
+  <div class="setup-title" id="psp-title">הגדר קוד PIN</div>
+  <div id="psp-content"></div>
+</div>
+
+<input type="file" id="import-file" accept=".json" style="display:none"/>
+
+
+<script>
+'use strict';
+// ════════════════════════════════════════
+// HEBREW CALENDAR MATH
+// ════════════════════════════════════════
+const H_EPOCH=-1373427;
+function hMod(a,b){return((a%b)+b)%b}
+function isHLeap(y){return hMod(7*y+1,19)<7}
+function hCE(y){const me=Math.floor((235*y-234)/19),p=12084+13753*me;let d=29*me+Math.floor(p/25920);if(hMod(3*(d+1),7)<3)d++;return d}
+function hYD(y){if(y<=1)return 0;const n0=hCE(y-1),n1=hCE(y),n2=hCE(y+1);if(n2-n1===356)return 2;if(n1-n0===382)return 1;return 0}
+function hNY(y){return H_EPOCH+hCE(y)+hYD(y)}
+function hYLen(y){return hNY(y+1)-hNY(y)}
+function hMD(y,m){if(m===2||m===4||m===6||m===10||m===13)return 29;if(m===12)return isHLeap(y)?30:29;if(m===8)return hYLen(y)%10===5?30:29;if(m===9)return hYLen(y)%10===3?29:30;return 30}
+function hToRD(y,m,d){const lm=isHLeap(y)?13:12;let days=0;if(m<7){for(let i=7;i<=lm;i++)days+=hMD(y,i);for(let i=1;i<m;i++)days+=hMD(y,i)}else{for(let i=7;i<m;i++)days+=hMD(y,i)}return hNY(y)+days+d-1}
+function rdToH(rd){let y=Math.floor((rd-H_EPOCH)/365.25)+1;while(hNY(y+1)<=rd)y++;while(hNY(y)>rd)y--;const lm=isHLeap(y)?13:12;const order=[7,8,9,10,11,12];if(isHLeap(y))order.push(13);for(let i=1;i<=6;i++)order.push(i);let month=7;for(const m of order){if(rd<hToRD(y,m,1)+hMD(y,m)){month=m;break}}return{year:y,month,day:rd-hToRD(y,month,1)+1}}
+function isGL(y){return y%4===0&&(y%100!==0||y%400===0)}
+function gToRD(y,m,d){const yp=y-1;return 365*yp+Math.floor(yp/4)-Math.floor(yp/100)+Math.floor(yp/400)+Math.floor((367*m-362)/12)+(m<=2?0:isGL(y)?-1:-2)+d}
+function rdToG(rd){let y=Math.floor((rd-1)/365.25)+1;while(gToRD(y+1,1,1)<=rd)y++;while(gToRD(y,1,1)>rd)y--;const dpm=[31,isGL(y)?29:28,31,30,31,30,31,31,30,31,30,31];let p=rd-gToRD(y,1,1),m=0;while(m<12&&p>=dpm[m]){p-=dpm[m];m++}return{year:y,month:m+1,day:p+1}}
+function isoToH(iso){const[y,m,d]=iso.split('-').map(Number);return rdToH(gToRD(y,m,d))}
+function isoToRD(iso){const[y,m,d]=iso.split('-').map(Number);return gToRD(y,m,d)}
+function rdToISO(rd){const g=rdToG(rd);return`${g.year}-${String(g.month).padStart(2,'0')}-${String(g.day).padStart(2,'0')}`}
+
+// ════════════════════════════════════════
+// HEBREW NUMERALS (גימטריה)
+// ════════════════════════════════════════
+const HN=[[400,'ת'],[300,'ש'],[200,'ר'],[100,'ק'],[90,'צ'],[80,'פ'],[70,'ע'],[60,'ס'],[50,'נ'],[40,'מ'],[30,'ל'],[20,'כ'],[10,'י'],[9,'ט'],[8,'ח'],[7,'ז'],[6,'ו'],[5,'ה'],[4,'ד'],[3,'ג'],[2,'ב'],[1,'א']];
+function toHN(n){if(n<=0||n>=10000)return String(n);let rem=n,res='';for(const[v,l]of HN){while(rem>=v){if(v===10&&rem%100===15){res+='טו';rem-=15;continue}if(v===10&&rem%100===16){res+='טז';rem-=16;continue}res+=l;rem-=v}}return res.length===1?res+'׳':res.slice(0,-1)+'״'+res.slice(-1)}
+function hYearStr(hy){return toHN(hy%1000)}
+function hebDateStr(iso){const h=isoToH(iso);return`${toHN(h.day)} ${HM[h.month]} ${hYearStr(h.year)}`}
+
+// ════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════
+const HM={1:'ניסן',2:'אייר',3:'סיוון',4:'תמוז',5:'אב',6:'אלול',7:'תשרי',8:'חשוון',9:'כסלו',10:'טבת',11:'שבט',12:'אדר',13:'אדר ב׳'};
+const HEB_CIVIL=[7,8,9,10,11,12,1,2,3,4,5,6];
+const GM=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const HOLIDAYS=[{id:'rosh_hashana',name:'ראש השנה',month:7,day:1},{id:'yom_kippur',name:'יום כיפור',month:7,day:10},{id:'sukkot',name:'סוכות',month:7,day:15},{id:'pesach',name:'פסח',month:1,day:15},{id:'shavuot',name:'שבועות',month:3,day:6}];
+const DBOPTS=[{v:0,l:'ביום עצמו'},{v:1,l:'יום לפני'},{v:3,l:'3 ימים'},{v:7,l:'שבוע'},{v:14,l:'שבועיים'},{v:30,l:'חודש לפני'}];
+const DEF_NOTIF={enabled:false,threshold:100,timeOfDay:'09:00',dayOfMonth:1,hebrewMonths:[],gregorianMonths:[],holidays:Object.fromEntries(HOLIDAYS.map(h=>[h.id,{enabled:false,daysBefore:0}])),scheduledIds:[]};
+const FREQ_L={monthly:'חודשי',weekly:'שבועי',yearly:'שנתי'};
+
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let S={rate:.1,entries:[],recurring:[],pinHash:null,privacyMode:false,notif:JSON.parse(JSON.stringify(DEF_NOTIF))};
+let quickHidden=false,currentType='income',typeFilter='all',pft='none',selYear=null,selMonth=null;
+let pinSetupStep=0,pinSetupMode='',pinSetupBuf='',pinSetupFirst='';
+let pinBuf='';
+
+// ════════════════════════════════════════
+// THEME
+// ════════════════════════════════════════
+function h2rgba(h,a){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return`rgba(${r},${g},${b},${a})`}
+function applyTheme(t){
+  if(!t?.colorScheme)return;const c=t.colorScheme,r=document.documentElement;
+  r.style.setProperty('--c-pri',c.primary);r.style.setProperty('--c-on-pri',c.onPrimary);
+  r.style.setProperty('--c-sec',c.secondary);r.style.setProperty('--c-on-sec',c.onSecondary);
+  r.style.setProperty('--c-surf',c.surface);r.style.setProperty('--c-on-surf',c.onSurface);
+  r.style.setProperty('--c-surf-hi',c.surfaceContainerHighest);
+  r.style.setProperty('--c-err',c.error);r.style.setProperty('--c-on-err',c.onError);
+  r.style.setProperty('--c-out',c.outline);
+  r.style.setProperty('--c-pri-s',h2rgba(c.primary,.12));
+  r.style.setProperty('--c-sec-s',h2rgba(c.secondary,.12));
+  document.body.classList.toggle('dark-mode',t.mode==='dark');
+  if(t.typography){const ty=t.typography;
+    r.style.setProperty('--font',`'${ty.fontFamily}','David',serif`);
+    r.style.setProperty('--fs',`${ty.fontSize}px`);
+    r.style.setProperty('--lh',String(ty.lineHeight));}
+}
+
+// ════════════════════════════════════════
+// PRIVACY
+// ════════════════════════════════════════
+function isHidden(){return S.privacyMode||quickHidden}
+function $$(s){return document.querySelector(s)}
+function moneyStr(n){return isHidden()?'••••':'₪'+fmt(n)}
+function toggleQuickHide(){
+  quickHidden=!quickHidden;
+  const btn=$$('#quick-hide-btn');
+  btn.textContent=quickHidden?'🙈':'👁️';
+  btn.classList.toggle('danger',quickHidden);
+  renderMoney();renderHist();
+}
+function togglePrivacyPerm(){
+  S.privacyMode=$$('#priv-toggle').checked;
+  if(S.privacyMode)quickHidden=false;
+  syncPrivacyUI();renderMoney();renderHist();save();
+}
+function syncPrivacyUI(){
+  $$('#priv-toggle').checked=S.privacyMode;
+  const hidden=S.privacyMode||quickHidden;
+  $$('#quick-hide-btn').textContent=hidden?'🙈':'👁️';
+  $$('#quick-hide-btn').classList.toggle('danger',hidden);
+}
+function renderMoney(){
+  const{inc,paid,oblig,bal}=computeTotals();
+  $$('#s-inc').textContent=moneyStr(inc);$$('#s-oblig').textContent=moneyStr(oblig);
+  $$('#s-paid').textContent=moneyStr(paid);$$('#s-bal').textContent=moneyStr(bal);
+}
+
+// ════════════════════════════════════════
+// LOCK / PIN
+// ════════════════════════════════════════
+function hashPin(p){let h=0;for(let i=0;i<p.length;i++)h=((h<<5)-h+p.charCodeAt(i))|0;return h.toString(36)}
+function showLock(){pinBuf='';updateDots();$$('#lock-screen').classList.add('open')}
+function hideLock(){
+  const ls=$$('#lock-screen');ls.classList.add('hiding');
+  setTimeout(()=>{ls.classList.remove('open','hiding')},260);
+}
+function pkPress(n){if(pinBuf.length>=4)return;pinBuf+=String(n);updateDots();if(pinBuf.length===4)checkPin()}
+function pkDel(){pinBuf=pinBuf.slice(0,-1);updateDots()}
+function updateDots(){for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('filled',i<pinBuf.length)}
+function checkPin(){
+  if(hashPin(pinBuf)===S.pinHash){hideLock();}
+  else{
+    $$('#pin-dots').classList.add('shake');
+    setTimeout(()=>$$('#pin-dots').classList.remove('shake'),300);
+    const err=$$('#lock-err');err.classList.add('show');setTimeout(()=>err.classList.remove('show'),1400);
+    pinBuf='';updateDots();
+  }
+}
+function lockApp(){if(S.pinHash)showLock()}
+function openPinSetup(mode){pinSetupMode=mode;pinSetupStep=0;pinSetupBuf='';pinSetupFirst='';$$('#psp-title').textContent=mode==='set'?(S.pinHash?'שנה קוד PIN':'הגדר קוד PIN'):'הסר קוד PIN';renderPinSetup();$$('#pss').classList.add('open');$$('#psp').classList.add('open')}
+function closePinSetup(){$$('#pss').classList.remove('open');$$('#psp').classList.remove('open')}
+function renderPinSetup(){
+  const needOld=S.pinHash!==null;
+  const labels={set:needOld?['קוד נוכחי','קוד חדש','אשר קוד חדש']:['קוד חדש','אשר קוד חדש'],del:['קוד נוכחי לאישור']};
+  const arr=labels[pinSetupMode];const label=arr[pinSetupStep];
+  if(label===undefined){closePinSetup();return}
+  const dots=Array(4).fill(0).map((_,i)=>`<div style="width:13px;height:13px;border-radius:50%;border:2px solid var(--c-out);display:inline-block;margin:0 4px;${i<pinSetupBuf.length?'background:var(--c-pri);border-color:var(--c-pri)':''}"></div>`).join('');
+  $$('#psp-content').innerHTML=`
+    <div style="font-size:.78em;opacity:.68;text-align:center;margin-bottom:8px">${label}</div>
+    <div style="text-align:center;margin-bottom:10px">${dots}</div>
+    <div class="pin-pad">
+      ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pin-key" onclick="psPress(${n})">${n}</button>`).join('')}
+      <button class="pin-key empty"></button>
+      <button class="pin-key" onclick="psPress(0)">0</button>
+      <button class="pin-key del" onclick="psDel()">⌫</button>
+    </div>
+    <div class="lock-err" id="ps-err" style="text-align:center;margin-top:5px"></div>
+    <button class="btn btn-sec btn-sm btn-full" onclick="closePinSetup()" style="margin-top:8px">ביטול</button>`;
+}
+function psPress(n){if(pinSetupBuf.length>=4)return;pinSetupBuf+=String(n);renderPinSetup();if(pinSetupBuf.length===4)setTimeout(()=>pinSetupSubmit(),80)}
+function psDel(){pinSetupBuf=pinSetupBuf.slice(0,-1);renderPinSetup()}
+function showPsErr(msg){const e=document.getElementById('ps-err');if(e){e.textContent=msg;e.style.opacity='1'}pinSetupBuf='';renderPinSetup()}
+function pinSetupSubmit(){
+  const h=hashPin(pinSetupBuf),needOld=S.pinHash!==null;
+  if(pinSetupMode==='del'){if(h!==S.pinHash){showPsErr('קוד שגוי');return}S.pinHash=null;save();updatePinUI();closePinSetup();notify('קוד הוסר','info');return}
+  if(needOld&&pinSetupStep===0){if(h!==S.pinHash){showPsErr('קוד נוכחי שגוי');return}pinSetupStep=1;pinSetupBuf='';renderPinSetup();return}
+  const confirmStep=needOld?2:1;
+  if(pinSetupStep<confirmStep){pinSetupFirst=pinSetupBuf;pinSetupStep++;pinSetupBuf='';renderPinSetup();return}
+  if(pinSetupBuf!==pinSetupFirst){showPsErr('הקודים אינם תואמים');return}
+  S.pinHash=hashPin(pinSetupBuf);save();updatePinUI();closePinSetup();notify('קוד הוגדר ✓','success');
+}
+function updatePinUI(){
+  const has=!!S.pinHash;
+  $$('#pin-status').textContent=has?'מוגדר ✓':'לא מוגדר';
+  $$('#pin-set-btn').textContent=has?'שנה':'הגדר';
+  $$('#pin-del-btn').style.display=has?'':'none';
+  $$('#lock-btn').style.display=has?'flex':'none';
+}
+
+// ════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════
+function switchTab(id){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+  if(id==='settings')renderRecSettings();
+}
+
+// ════════════════════════════════════════
+// RATE
+// ════════════════════════════════════════
+function setRate(r){
+  S.rate=r;
+  $$('#rb-10').classList.toggle('sel',r===.1);$$('#rb-20').classList.toggle('sel',r===.2);
+  $$('#rate-mini').textContent=(r*100).toFixed(0)+'%';
+  updatePreview();renderDash();renderHist();save();
+}
+
+// ════════════════════════════════════════
+// QUICK PAY POPOVER (bottom sheet)
+// ════════════════════════════════════════
+function openQP(){
+  $$('#qp-scrim').classList.add('open');$$('#qp-popover').classList.add('open');
+  setTimeout(()=>$$('#qp-amt').focus(),250);
+}
+function closeQP(){$$('#qp-scrim').classList.remove('open');$$('#qp-popover').classList.remove('open')}
+function addQuickPay(){
+  const amt=parseFloat($$('#qp-amt').value);
+  const desc=$$('#qp-desc').value.trim()||'תשלום מעשר';
+  if(!amt||amt<=0){showErr('יש להזין סכום תקין');return}
+  S.entries.unshift({id:uid(),date:todayISO(),type:'payment',amount:round2(amt),description:desc,note:''});
+  save();renderAll();closeQP();
+  $$('#qp-amt').value='';$$('#qp-desc').value='';
+  notify(`תרומה ₪${fmt(amt)} נרשמה ✓`,'success');
+}
+
+// ════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════
+function computeTotals(){
+  let inc=0,paid=0;
+  S.entries.forEach(e=>{if(e.type==='income')inc+=e.amount;if(e.type==='payment')paid+=e.amount});
+  const oblig=inc*S.rate,bal=Math.max(0,oblig-paid),pct=oblig>0?Math.min(100,(paid/oblig)*100):0;
+  return{inc,paid,oblig,bal,pct};
+}
+function renderDash(){
+  const{inc,paid,oblig,bal,pct}=computeTotals();
+  $$('#s-inc').textContent=moneyStr(inc);$$('#s-oblig').textContent=moneyStr(oblig);
+  $$('#s-paid').textContent=moneyStr(paid);$$('#s-bal').textContent=moneyStr(bal);
+  $$('#s-bal-card').className='sc '+(bal>0?'err':'ok');
+  const bar=$$('#s-prog'),pctEl=$$('#s-pct');
+  bar.style.width=pct.toFixed(1)+'%';
+  if(pct>=100){pctEl.textContent='✓ שולם';pctEl.style.color='#228B22';bar.style.background='#228B22'}
+  else{pctEl.textContent=pct.toFixed(0)+'%';pctEl.style.color='var(--c-pri)';bar.style.background='var(--c-pri)'}
+}
+
+// ════════════════════════════════════════
+// ENTRY FORM
+// ════════════════════════════════════════
+function setType(t){
+  currentType=t;
+  ['inc','pay','rec'].forEach(k=>$$('#t-'+k).classList.remove('active'));
+  $$('#t-'+{income:'inc',payment:'pay',recurring:'rec'}[t]).classList.add('active');
+  $$('#onetime-fields').style.display=t==='recurring'?'none':'block';
+  $$('#recurring-fields').style.display=t==='recurring'?'block':'none';
+  $$('#e-preview').classList.remove('vis');updatePreview();
+}
+function toggleEndDate(){const h=$$('#r-has-end').checked;$$('#r-end').disabled=!h;$$('#r-end').style.opacity=h?'1':'.42'}
+function updatePreview(){
+  const prev=$$('#e-preview');if(currentType!=='income'){prev.classList.remove('vis');return}
+  const amt=parseFloat($$('#e-amt').value);if(!amt||amt<=0){prev.classList.remove('vis');return}
+  prev.textContent=`↳ מעשר (${(S.rate*100).toFixed(0)}%): ₪${fmt(amt*S.rate)}`;prev.classList.add('vis');
+}
+function addEntry(){
+  const amt=parseFloat($$('#e-amt').value),desc=$$('#e-desc').value.trim();
+  const date=$$('#e-date').value||todayISO(),note=$$('#e-note').value.trim();
+  if(!amt||amt<=0){showErr('יש להזין סכום תקין');return}
+  if(!desc){showErr('יש להזין תיאור');return}
+  S.entries.unshift({id:uid(),date,type:currentType,amount:round2(amt),description:desc,note});
+  save();renderAll();$$('#e-amt').value='';$$('#e-desc').value='';$$('#e-note').value='';$$('#e-preview').classList.remove('vis');
+  notify(`${currentType==='income'?'הכנסה':'תרומה'} ₪${fmt(amt)} נשמרה ✓`,'success');switchTab('dash');
+}
+
+// ════════════════════════════════════════
+// RECURRING
+// ════════════════════════════════════════
+function addRecurring(){
+  const amt=parseFloat($$('#r-amt').value),desc=$$('#r-desc').value.trim();
+  const freq=$$('#r-freq').value,start=$$('#r-start').value||todayISO();
+  const hasEnd=$$('#r-has-end').checked,endDate=hasEnd?$$('#r-end').value:null;
+  const note=$$('#r-note').value.trim();
+  if(!amt||amt<=0){showErr('יש להזין סכום');return}if(!desc){showErr('יש להזין תיאור');return}
+  if(hasEnd&&endDate&&endDate<start){showErr('תאריך סיום לפני התחלה');return}
+  S.recurring.push({id:uid(),description:desc,amount:round2(amt),frequency:freq,startDate:start,endDate:endDate||null,lastProcessed:null,active:true,note});
+  save();renderRecSettings();$$('#r-amt').value='';$$('#r-desc').value='';$$('#r-note').value='';$$('#r-has-end').checked=false;toggleEndDate();
+  notify(`תרומה קבועה נוספה ✓`,'success');switchTab('settings');
+}
+async function deleteRecurring(id){
+  try{const{data}=await Otzaria.call('ui.showConfirm',{title:'מחיקת תרומה קבועה',content:'האם למחוק?'});if(!data.confirmed)return}catch{if(!confirm('למחוק?'))return}
+  S.recurring=S.recurring.filter(r=>r.id!==id);save();renderRecSettings();
+}
+function nextDueRD(rec,fromRD){
+  const g=rdToG(fromRD),sg=(()=>{const[y,m,d]=rec.startDate.split('-').map(Number);return{year:y,month:m,day:d}})();
+  if(rec.frequency==='weekly')return fromRD+7;
+  if(rec.frequency==='monthly'){let nm=g.month+1,ny=g.year;if(nm>12){nm=1;ny++}return gToRD(ny,nm,Math.min(sg.day,new Date(ny,nm,0).getDate()))}
+  const ny=g.year+1;return gToRD(ny,sg.month,Math.min(sg.day,new Date(ny,sg.month,0).getDate()));
+}
+async function processRecurring(){
+  const todayRD=isoToRD(todayISO());let changed=false;const newEntries=[];
+  for(const rec of S.recurring){
+    if(!rec.active)continue;
+    const startRD=isoToRD(rec.startDate),endRD=rec.endDate?isoToRD(rec.endDate):null;
+    let curRD=rec.lastProcessed?nextDueRD(rec,isoToRD(rec.lastProcessed)):startRD;
+    while(curRD<=todayRD){
+      if(endRD&&curRD>endRD){if(rec.active){rec.active=false;changed=true;try{await Otzaria.call('notifications.showInApp',{message:`תרומה קבועה "${rec.description}" הסתיימה`,type:'info'})}catch{}}break}
+      newEntries.push({id:uid(),date:rdToISO(curRD),type:'payment',amount:rec.amount,description:rec.description,note:`תרומה קבועה (${FREQ_L[rec.frequency]})`,recurringId:rec.id});
+      rec.lastProcessed=rdToISO(curRD);changed=true;curRD=nextDueRD(rec,curRD);
+    }
+    if(endRD&&todayRD>=endRD&&rec.active&&rec.lastProcessed){if(nextDueRD(rec,isoToRD(rec.lastProcessed))>endRD){rec.active=false;changed=true;try{await Otzaria.call('notifications.showInApp',{message:`תרומה "${rec.description}" הסתיימה`,type:'info'})}catch{}}}
+  }
+  if(newEntries.length>0){S.entries=[...S.entries,...newEntries].sort((a,b)=>b.date.localeCompare(a.date));notify(`${newEntries.length} תרומות קבועות נרשמו`,'info')}
+  if(changed)await save();
+}
+function renderRecSettings(){
+  const el=$$('#rec-list-settings');if(!el)return;
+  if(!S.recurring.length){el.innerHTML='<div class="empty" style="padding:10px"><div class="empty-txt">אין תרומות קבועות</div></div>';return}
+  el.innerHTML=S.recurring.map(r=>`<div class="rec-card${r.active?'':' ended'}">
+    <div style="font-size:1em;flex-shrink:0">🔁</div>
+    <div class="rec-body">
+      <div class="rec-name">${esc(r.description)} · ${moneyStr(r.amount)}</div>
+      <div class="rec-meta">${FREQ_L[r.frequency]} · ${r.endDate?'עד '+formatGDate(r.endDate):'ללא הגבלה'}</div>
+    </div>
+    <span class="rec-status ${r.active?'active':'ended'}">${r.active?'פעיל':'הסתיים'}</span>
+    <button class="h-del" onclick="deleteRecurring('${r.id}')">✕</button>
+  </div>`).join('');
+}
+
+// ════════════════════════════════════════
+// HISTORY — TYPE FILTER
+// ════════════════════════════════════════
+document.getElementById('type-chips').addEventListener('click',e=>{
+  const tf=e.target.dataset.tf;if(!tf)return;
+  typeFilter=tf;
+  document.querySelectorAll('#type-chips .chip').forEach(c=>c.classList.toggle('active',c.dataset.tf===tf));
+  renderHist();
+});
+
+// SEARCH
+function clearSearch(){$$('#hist-search').value='';$$('#search-clear-btn').style.display='none';renderHist()}
+$$('#hist-search').addEventListener('input',function(){
+  $$('#search-clear-btn').style.display=this.value?'':'none';
+});
+
+// PERIOD FILTER
+function setPFT(t){
+  pft=t;selYear=null;selMonth=null;
+  ['none','hebrew','greg'].forEach(k=>$$('#pft-'+k).classList.toggle('active',k===t));
+  $$('#period-selectors').style.display=t==='none'?'none':'block';
+  if(t!=='none')buildYearChips();
+  renderHist();
+}
+function buildYearChips(){
+  const el=$$('#year-chips');el.innerHTML='';
+  const years=new Set();
+  S.entries.forEach(e=>{years.add(pft==='hebrew'?isoToH(e.date).year:parseInt(e.date.split('-')[0]))});
+  [...years].sort((a,b)=>b-a).forEach(y=>{
+    const b=document.createElement('button');
+    b.className='chip'+(selYear===y?' active':'');
+    b.textContent=pft==='hebrew'?`${hYearStr(y)} (${y})`:String(y);
+    b.onclick=()=>{selYear=selYear===y?null:y;selMonth=null;buildYearChips();buildMonthChips();renderHist()};
+    el.appendChild(b);
+  });
+}
+function buildMonthChips(){
+  const el=$$('#month-chips'),lbl=$$('#month-label');el.innerHTML='';
+  if(!selYear){el.innerHTML='<span style="font-size:.68em;opacity:.45">בחר שנה</span>';if(lbl)lbl.style.display='none';return}
+  if(lbl)lbl.style.display='';
+  const months=new Set();
+  S.entries.forEach(e=>{
+    if(pft==='hebrew'){const h=isoToH(e.date);if(h.year===selYear)months.add(h.month)}
+    else{const y=parseInt(e.date.split('-')[0]),m=parseInt(e.date.split('-')[1]);if(y===selYear)months.add(m)}
+  });
+  const order=pft==='hebrew'?HEB_CIVIL:[1,2,3,4,5,6,7,8,9,10,11,12];
+  order.forEach(m=>{
+    if(!months.has(m))return;
+    const b=document.createElement('button');b.className='chip'+(selMonth===m?' active':'');
+    b.textContent=pft==='hebrew'?HM[m]:GM[m-1];
+    b.onclick=()=>{selMonth=selMonth===m?null:m;buildMonthChips();renderHist()};
+    el.appendChild(b);
+  });
+  if(!el.children.length)el.innerHTML='<span style="font-size:.68em;opacity:.45">אין רשומות</span>';
+}
+function matchesPeriod(e){
+  if(pft==='none')return true;if(selYear===null)return true;
+  if(pft==='hebrew'){const h=isoToH(e.date);if(h.year!==selYear)return false;if(selMonth!==null&&h.month!==selMonth)return false}
+  else{const y=parseInt(e.date.split('-')[0]),m=parseInt(e.date.split('-')[1]);if(y!==selYear)return false;if(selMonth!==null&&m!==selMonth)return false}
+  return true;
+}
+function matchesSearch(e,q){
+  if(!q)return true;const lq=q.toLowerCase();
+  return e.description.toLowerCase().includes(lq)||(e.note||'').toLowerCase().includes(lq)||
+    e.date.includes(lq)||hebDateStr(e.date).includes(q)||formatGDate(e.date).includes(q);
+}
+
+function renderHist(){
+  const list=$$('#hist-list'),cnt=$$('#result-count');
+  const q=$$('#hist-search').value.trim();
+  const filtered=S.entries.filter(e=>{
+    const tfOk=typeFilter==='all'
+      ||(typeFilter==='recurring'&&e.recurringId)
+      ||(typeFilter!=='recurring'&&e.type===typeFilter&&!e.recurringId);
+    return tfOk&&matchesPeriod(e)&&matchesSearch(e,q);
+  });
+  cnt.textContent=filtered.length>0?`${filtered.length} רשומות`:'';
+  if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div class="empty-txt">אין רשומות תואמות</div></div>';return}
+  const qEsc=q?q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'):'';
+  const hlRe=q?new RegExp(`(${qEsc})`,'gi'):null;
+  function hl(str){return hlRe?str.replace(hlRe,'<mark style="background:var(--c-pri-s);color:var(--c-pri);border-radius:3px;padding:0 2px">$1</mark>'):str}
+  list.innerHTML=filtered.map(e=>{
+    const isInc=e.type==='income',isRec=!!e.recurringId;
+    const ic=isRec?'rec':isInc?'inc':'pay',ac=isRec?'rec':isInc?'inc':'pay';
+    const sign=isInc?'+':'-';
+    return`<div class="hist-item${isRec?' rec-item':''}">
+      <div class="h-icon ${ic}">${isRec?'🔁':isInc?'💰':'🕊️'}</div>
+      <div class="h-body">
+        <div class="h-desc">${hl(esc(e.description))}</div>
+        <div class="h-meta">${hebDateStr(e.date)} · ${formatGDate(e.date)}${e.note?' · '+hl(esc(e.note)):''}</div>
+      </div>
+      <div class="h-right">
+        <div class="h-amt ${ac}">${sign}${moneyStr(e.amount)}</div>
+        ${isInc?`<span class="h-maaser">מעשר: ${moneyStr(e.amount*S.rate)}</span>`:''}
+      </div>
+      <button class="h-del" onclick="deleteEntry('${e.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function deleteEntry(id){
+  try{const{data}=await Otzaria.call('ui.showConfirm',{title:'מחיקת רשומה',content:'האם למחוק?'});if(!data.confirmed)return}catch{if(!confirm('למחוק?'))return}
+  S.entries=S.entries.filter(e=>e.id!==id);save();renderAll();
+}
+async function clearAll(){
+  try{const{data}=await Otzaria.call('ui.showWarning',{title:'מחיקת כל הנתונים',content:'כל הרשומות ימחקו.',subtitle:'פעולה בלתי הפיכה!'});if(!data.confirmed)return}
+  catch{if(!confirm('למחוק הכל?'))return}
+  S.entries=[];S.recurring=[];save();renderAll();renderRecSettings();notify('כל הנתונים נמחקו','info');
+}
+
+// ════════════════════════════════════════
+// EXPORT / IMPORT
+// ════════════════════════════════════════
+
+// ── JSON export ──
+function exportJSON(){
+  const json=JSON.stringify({version:4,exportDate:todayISO(),rate:S.rate,entries:S.entries,recurring:S.recurring,notif:S.notif},null,2);
+  tryDownload(json,'application/json',`maaser_${todayISO()}.json`,json);
+}
+
+// ── Excel (SpreadsheetML XML) export ──
+function exportExcel(){
+  const rows=S.entries.map(e=>{
+    const h=isoToH(e.date);
+    return[
+      formatGDate(e.date),
+      hebDateStr(e.date),
+      e.type==='income'?'הכנסה':e.type==='payment'?'תשלום':'תשלום קבוע',
+      e.amount,
+      e.type==='income'?round2(e.amount*S.rate):0,
+      e.description,
+      e.note||''
+    ];
+  });
+
+  const headers=['תאריך לועזי','תאריך עברי','סוג','סכום (₪)',`מעשר ${(S.rate*100).toFixed(0)}% (₪)`,'תיאור','הערה'];
+
+  // Build SpreadsheetML (Excel 2003 XML — widely supported)
+  const xmlRows=[headers,...rows].map(row=>{
+    const cells=row.map(cell=>{
+      if(typeof cell==='number')
+        return`<Cell><Data ss:Type="Number">${cell}</Data></Cell>`;
+      return`<Cell><Data ss:Type="String">${String(cell).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</Data></Cell>`;
+    }).join('');
+    return`<Row>${cells}</Row>`;
+  }).join('');
+
+  // Summary rows
+  const{inc,paid,oblig,bal}=computeTotals();
+  const summaryRows=[
+    ['','','','','','',''],
+    ['סיכום','','','','','',''],
+    [`סה״כ הכנסות: ₪${fmt(inc)}`,'','','','','',''],
+    [`חובת מעשר (${(S.rate*100).toFixed(0)}%): ₪${fmt(oblig)}`,'','','','','',''],
+    [`שולם: ₪${fmt(paid)}`,'','','','','',''],
+    [`יתרה: ₪${fmt(bal)}`,'','','','','',''],
+  ].map(row=>`<Row>${row.map(c=>`<Cell><Data ss:Type="String">${esc(String(c))}</Data></Cell>`).join('')}</Row>`).join('');
+
+  const xml=`<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:x="urn:schemas-microsoft-com:office:excel">
+<Styles>
+  <Style ss:ID="H"><Font ss:Bold="1"/><Interior ss:Color="#EDE7F6" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="N"><NumberFormat ss:Format="#,##0.00"/></Style>
+</Styles>
+<Worksheet ss:Name="מעשרות">
+<Table>
+  <Column ss:Width="110"/>
+  <Column ss:Width="120"/>
+  <Column ss:Width="75"/>
+  <Column ss:Width="90"/>
+  <Column ss:Width="90"/>
+  <Column ss:Width="160"/>
+  <Column ss:Width="120"/>
+  ${xmlRows}${summaryRows}
+</Table>
+</Worksheet>
+</Workbook>`;
+
+  tryDownload(xml,'application/vnd.ms-excel',`maaser_${todayISO()}.xls`,json=>{});
+  // Pass xml as content
+  try{
+    const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel;charset=utf-8'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');
+    a.href=url;a.download=`maaser_${todayISO()}.xls`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    notify('קובץ Excel יוצא ✓','success');
+  }catch{
+    $$('#ov-ta').value=xml;$$('#ov-scrim').classList.add('open');$$('#ov-panel').classList.add('open');
+  }
+}
+
+function tryDownload(content,mime,filename){
+  try{
+    const blob=new Blob([content],{type:mime+';charset=utf-8'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+    document.body.removeChild(a);URL.revokeObjectURL(url);
+    notify('יוצא בהצלחה ✓','success');
+  }catch{
+    $$('#ov-ta').value=content;$$('#ov-scrim').classList.add('open');$$('#ov-panel').classList.add('open');
+  }
+}
+
+function closeOv(){$$('#ov-scrim').classList.remove('open');$$('#ov-panel').classList.remove('open')}
+async function copyExportFallback(){try{await navigator.clipboard.writeText($$('#ov-ta').value);notify('הועתק ✓','success')}catch{showErr('לא ניתן להעתיק')}}
+
+document.getElementById('import-file').addEventListener('change',async function(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=async ev=>{try{await handleImport(JSON.parse(ev.target.result))}catch{showErr('קובץ לא תקין')}};r.readAsText(f);this.value='';
+});
+async function handleImport(data){
+  if(!data.entries||!Array.isArray(data.entries)){showErr('חסר שדה entries');return}
+  let ok=true;
+  try{const{data:c}=await Otzaria.call('ui.showConfirm',{title:'ייבוא',content:`${data.entries.length} רשומות יצורפו (ללא כפילויות).`});ok=c.confirmed}
+  catch{ok=confirm(`ייבא ${data.entries.length} רשומות?`)}
+  if(!ok)return;
+  const ex=new Set(S.entries.map(e=>e.id));
+  S.entries=[...S.entries,...data.entries.filter(e=>e.id&&!ex.has(e.id))].sort((a,b)=>b.date.localeCompare(a.date));
+  if(typeof data.rate==='number')S.rate=data.rate;
+  if(Array.isArray(data.recurring)){const xr=new Set(S.recurring.map(r=>r.id));S.recurring=[...S.recurring,...data.recurring.filter(r=>!xr.has(r.id))]}
+  if(data.notif)S.notif={...DEF_NOTIF,...data.notif,holidays:{...DEF_NOTIF.holidays,...(data.notif.holidays||{})}};
+  await save();renderAll();populateNotifUI();notify('ייבוא הצליח ✓','success');
+}
+
+// ════════════════════════════════════════
+// NOTIFICATIONS
+// ════════════════════════════════════════
+function buildNotifUI(){
+  const hc=$$('#heb-m-chips');hc.innerHTML='';
+  HEB_CIVIL.forEach(m=>{const b=document.createElement('button');b.className='chip';b.id='hm'+m;b.textContent=HM[m];b.onclick=()=>toggleArr(S.notif,'hebrewMonths',m,b);hc.appendChild(b)});
+  const gc=$$('#greg-m-chips');gc.innerHTML='';
+  for(let m=1;m<=12;m++){const b=document.createElement('button');b.className='chip';b.id='gm'+m;b.textContent=GM[m-1];b.onclick=()=>toggleArr(S.notif,'gregorianMonths',m,b);gc.appendChild(b)}
+  const hdc=$$('#hol-cards');hdc.innerHTML='';
+  HOLIDAYS.forEach(h=>{
+    const opts=DBOPTS.map(o=>`<option value="${o.v}">${o.l}</option>`).join('');
+    hdc.insertAdjacentHTML('beforeend',`<div class="hol-card">
+      <label class="tog-wrap" style="width:34px;height:18px"><input type="checkbox" id="hol-${h.id}"/><span class="tog-slider"></span></label>
+      <div class="hol-name">${h.name}</div>
+      <select class="form-select" id="hdb-${h.id}" style="width:auto;padding:3px 7px;font-size:.7em">${opts}</select>
+    </div>`);
+  });
+}
+function toggleArr(obj,key,val,btn){const arr=obj[key]||[];const i=arr.indexOf(val);if(i>=0)arr.splice(i,1);else arr.push(val);obj[key]=arr;btn.classList.toggle('active',arr.includes(val))}
+function populateNotifUI(){
+  const n=S.notif;$$('#n-enabled').checked=n.enabled;$$('#n-thresh').value=n.threshold;
+  $$('#n-time').value=n.timeOfDay;$$('#n-dom').value=String(n.dayOfMonth);toggleNotifSec();
+  HEB_CIVIL.forEach(m=>{const el=$$('#hm'+m);if(el)el.classList.toggle('active',(n.hebrewMonths||[]).includes(m))});
+  for(let m=1;m<=12;m++){const el=$$('#gm'+m);if(el)el.classList.toggle('active',(n.gregorianMonths||[]).includes(m))}
+  HOLIDAYS.forEach(h=>{const cfg=n.holidays?.[h.id]||{enabled:false,daysBefore:0};const c=$$(`#hol-${h.id}`),s=$$(`#hdb-${h.id}`);if(c)c.checked=cfg.enabled;if(s)s.value=String(cfg.daysBefore)});
+}
+function toggleNotifSec(){$$('#notif-sec').classList.toggle('on',$$('#n-enabled').checked)}
+async function saveNotif(){
+  const n=S.notif;
+  n.enabled=$$('#n-enabled').checked;n.threshold=parseFloat($$('#n-thresh').value)||100;
+  n.timeOfDay=$$('#n-time').value||'09:00';n.dayOfMonth=parseInt($$('#n-dom').value)||1;
+  HOLIDAYS.forEach(h=>{n.holidays[h.id]={enabled:!!$$(`#hol-${h.id}`)?.checked,daysBefore:parseInt($$(`#hdb-${h.id}`)?.value)||0}});
+  await save();if(n.enabled){await reqPerms();await scheduleNotifs()}else await cancelNotifs();notify('נשמר ✓','success');
+}
+async function reqPerms(){try{const{data}=await Otzaria.call('notifications.checkPermissions');if(!data.granted)await Otzaria.call('notifications.requestPermissions')}catch{}}
+async function cancelNotifs(){const ids=S.notif.scheduledIds||[];for(const id of ids)try{await Otzaria.call('notifications.cancel',{id})}catch{}S.notif.scheduledIds=[];await save()}
+function computeNotifDates(n){
+  const dates=[],tod=new Date(),todRD=gToRD(tod.getFullYear(),tod.getMonth()+1,tod.getDate()),todH=rdToH(todRD);
+  const dom=n.dayOfMonth||1,[hh,mm]=(n.timeOfDay||'09:00').split(':').map(Number);
+  for(const hm of(n.hebrewMonths||[])){for(let yo=0;yo<=2;yo++){const hy=todH.year+yo;if(hm===13&&!isHLeap(hy))continue;const d=Math.min(dom,hMD(hy,hm));const rd=hToRD(hy,hm,d);if(rd>todRD){const g=rdToG(rd);dates.push({iso:new Date(g.year,g.month-1,g.day,hh,mm).toISOString(),label:`${toHN(d)} ${HM[hm]} ${hYearStr(hy)}`});break}}}
+  for(const gm of(n.gregorianMonths||[])){for(let yo=0;yo<=2;yo++){const gy=tod.getFullYear()+yo,maxD=new Date(gy,gm,0).getDate(),d=Math.min(dom,maxD),rd=gToRD(gy,gm,d);if(rd>todRD){dates.push({iso:new Date(gy,gm-1,d,hh,mm).toISOString(),label:`${GM[gm-1]} ${gy}`});break}}}
+  for(const[holId,cfg]of Object.entries(n.holidays||{})){if(!cfg.enabled)continue;const hol=HOLIDAYS.find(h=>h.id===holId);if(!hol)continue;for(let yo=0;yo<=2;yo++){const hy=todH.year+yo,holRD=hToRD(hy,hol.month,hol.day),trigRD=holRD-(cfg.daysBefore||0);if(trigRD>todRD){const g=rdToG(trigRD);dates.push({iso:new Date(g.year,g.month-1,g.day,hh,mm).toISOString(),label:cfg.daysBefore>0?`${cfg.daysBefore} ימים לפני ${hol.name}`:hol.name});break}}}
+  return dates;
+}
+async function scheduleNotifs(){
+  await cancelNotifs();const{bal}=computeTotals();if(bal<S.notif.threshold){notify('יתרה נמוכה מסף','info');return}
+  const dates=computeNotifDates(S.notif);const ids=[];let cnt=0;
+  for(const t of dates){if(new Date(t.iso)<=new Date())continue;try{const{data}=await Otzaria.call('notifications.scheduleSystem',{title:'🌾 תזכורת מעשר',body:`יתרה: ₪${fmt(bal)} — ${t.label}`,scheduledTime:t.iso});if(data?.id)ids.push(data.id);cnt++}catch{}}
+  S.notif.scheduledIds=ids;await save();notify(cnt>0?`תוזמנו ${cnt} התראות ✓`:'לא נמצאו מועדים','info');
+}
+async function checkTodayNotif(){
+  const n=S.notif;if(!n.enabled){notify('התראות כבויות','info');return}
+  const{bal}=computeTotals();if(bal<n.threshold){notify(`יתרה ₪${fmt(bal)} נמוכה מסף`,'info');return}
+  const todRD=isoToRD(todayISO()),todH=rdToH(todRD),gm=new Date().getMonth()+1,gd=new Date().getDate(),dom=n.dayOfMonth||1;
+  let lbl=null;
+  if(!lbl&&(n.hebrewMonths||[]).includes(todH.month)&&todH.day===dom)lbl=HM[todH.month];
+  if(!lbl&&(n.gregorianMonths||[]).includes(gm)&&gd===dom)lbl=GM[gm-1];
+  if(!lbl){for(const[hid,cfg]of Object.entries(n.holidays||{})){if(!cfg.enabled)continue;const hol=HOLIDAYS.find(h=>h.id===hid);if(!hol)continue;const holRD=hToRD(todH.year,hol.month,hol.day),trig=holRD-(cfg.daysBefore||0),prev=hToRD(todH.year-1,hol.month,hol.day)-(cfg.daysBefore||0);if(trig===todRD||prev===todRD){lbl=cfg.daysBefore>0?`${cfg.daysBefore} ימים לפני ${hol.name}`:hol.name;break}}}
+  if(lbl){notify(`🔔 יתרה ₪${fmt(bal)} — ${lbl}`,'info');try{await Otzaria.call('notifications.sendSystem',{title:'🌾 תזכורת מעשר',body:`יתרה: ₪${fmt(bal)} — ${lbl}`})}catch{}}
+  else notify('היום לא מוגדרת התראה','info');
+}
+
+// ════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════
+async function save(){try{await Otzaria.call('storage.set',{key:'maaser_v4',value:{rate:S.rate,entries:S.entries,recurring:S.recurring,pinHash:S.pinHash,privacyMode:S.privacyMode,notif:S.notif}})}catch(e){console.warn('save failed',e)}}
+async function load(){
+  try{const{data}=await Otzaria.call('storage.get',{key:'maaser_v4'});
+    if(data&&typeof data==='object'){
+      if(typeof data.rate==='number')S.rate=data.rate;
+      if(Array.isArray(data.entries))S.entries=data.entries;
+      if(Array.isArray(data.recurring))S.recurring=data.recurring;
+      if(data.pinHash)S.pinHash=data.pinHash;
+      if(typeof data.privacyMode==='boolean')S.privacyMode=data.privacyMode;
+      if(data.notif)S.notif={...DEF_NOTIF,...data.notif,holidays:{...DEF_NOTIF.holidays,...(data.notif?.holidays||{})}};
+    }
+  }catch(e){console.warn('load failed',e)}
+}
+
+// ════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════
+function fmt(n){return n.toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function round2(n){return parseFloat(n.toFixed(2))}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function todayISO(){return new Date().toISOString().slice(0,10)}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
+function formatGDate(iso){try{return new Date(iso+'T12:00:00').toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'})}catch{return iso}}
+async function showErr(m){try{await Otzaria.call('ui.showError',{message:m})}catch{alert(m)}}
+async function notify(m,t){try{await Otzaria.call('notifications.showInApp',{message:m,type:t||'info'})}catch{console.log(m)}}
+function renderAll(){renderDash();renderHist()}
+
+// Close PIN setup on scrim click
+$$('#pss').addEventListener('click',closePinSetup);
+$$('#psp').addEventListener('click',e=>e.stopPropagation());
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+$$('#e-date').value=todayISO();
+$$('#r-start').value=todayISO();
+buildNotifUI();
+
+Otzaria.on('plugin.boot',async payload=>{
+  applyTheme(payload.theme);
+  await load();
+  if(S.pinHash)showLock();
+  setRate(S.rate);
+  syncPrivacyUI();
+  updatePinUI();
+  populateNotifUI();
+  await processRecurring();
+  renderAll();renderRecSettings();
+  if(S.notif.enabled)try{await checkTodayNotif()}catch{}
+});
+Otzaria.on('theme.changed',applyTheme);
+Otzaria.on('calendar.date_changed',async()=>{
+  await processRecurring();renderAll();
+  if(S.notif.enabled)try{await checkTodayNotif()}catch{}
+});
+</script>
+</body>
+</html>

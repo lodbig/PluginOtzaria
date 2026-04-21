@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "com.otzaria.marei.makom",
+  "name": "מנהל מראי מקומות",
+  "version": "1.0.0",
+  "description": "תוסף לניהול רשימות ומראי מקומות עם הדגשה בטקסט",
+  "author": "lodbig",
+  "entrypoint": "index.html",
+  "permissions": [
+    "app.info.read",
+    "reader.open",
+    "reader.context_menu",
+    "reader.highlight",
+    "ui.feedback",
+    "plugin.storage.read",
+    "plugin.storage.write",
+    "events.subscribe:reader.selection_changed"
+  ]
+}

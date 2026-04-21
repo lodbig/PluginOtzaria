@@ -1,0 +1,19 @@
+{
+  "id": "maaser-manager",
+  "name": "מעשר כספים",
+  "version": "3.0.0",
+  "description": "ניהול מעשרות וחומש — פרטיות, קוד גישה, תרומות קבועות, סינון שנתי/חודשי, יצוא/ייבוא",
+  "author": "lodbig",
+  "entrypoint": "index.html",
+  "permissions": [
+    "app.info.read",
+    "plugin.storage.read",
+    "plugin.storage.write",
+    "ui.feedback",
+    "notifications.send",
+    "notifications.system",
+    "calendar.read",
+    "events.subscribe:theme.changed",
+    "events.subscribe:calendar.date_changed"
+  ]
+}

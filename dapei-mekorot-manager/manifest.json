@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "com.otzaria.dapei.mekorot",
+  "name": "מנהל דפי מקורות",
+  "version": "1.0.0",
+  "entrypoint": "index.html",
+    "author": "lodbig",
+  "permissions": [
+    "app.info.read",
+    "reader.open",
+    "plugin.storage.read",
+    "plugin.storage.write",
+    "ui.feedback"
+  ],
+  "contributes": {
+    "toolTab": {
+      "title": "דפי מקורות",
+      "iconCodepoint": 59404
+    }
+  }
+}

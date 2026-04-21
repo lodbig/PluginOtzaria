@@ -1,0 +1,18 @@
+{
+  "id": "smart_bookmark_freeze",
+  "name": "סימניה חכמה - הקפאת לימוד",
+  "version": "1.0.0",
+  "description": "מקפיא את הלימוד בלחיצה ימנית, שומר את המיקום והמחשבות שלך, ומחזיר אותך בדיוק לאותה נקודה.",
+  "author": "lodbig",
+  "entrypoint": "index.html",
+  "permissions": [
+    "app.info.read",
+    "reader.context_menu",
+    "plugin.storage.read",
+    "plugin.storage.write",
+    "ui.feedback",
+    "navigation.write",
+    "reader.open",
+    "events.subscribe:theme.changed"
+  ]
+}
